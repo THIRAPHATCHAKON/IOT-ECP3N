@@ -1,0 +1,50 @@
+#include <WiFi.h>
+#include <WiFiManager.h>  // https://github.com/tzapu/WiFiManager
+
+#define RESET_PIN 0   // ขา GPIO ที่ต่อปุ่ม Reset Wi-Fi (เช่น GPIO0)
+Int pin_1 = 16;
+WiFiManager wm;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("\nStarting WiFiManager with Reset Button...");
+
+  pinMode(RESET_PIN, INPUT_PULLUP);  // เปิด pull-up ภายใน
+  pinMode(pin_1 , OUTPUT);
+  // ตรวจสอบว่ามีการกดปุ่ม Reset หรือไม่
+  if (digitalRead(RESET_PIN) == LOW) {
+    Serial.println("Reset button pressed... waiting 3 seconds to confirm.");
+    delay(3000); // กันการกดโดยไม่ตั้งใจ
+
+    if (digitalRead(RESET_PIN) == LOW) {
+      Serial.println("Button held for 3 seconds -> Resetting WiFi settings!");
+      wm.resetSettings();   // ล้างค่าการเชื่อมต่อ Wi-Fi เดิม
+      digitalWrite(pin_1 , HIGH);
+      delay(1000);
+      digitalWrite(pin_1 , LOW);
+      ESP.restart();        // รีสตาร์ตเครื่อง
+    } else {
+      Serial.println("Button released -> No reset.");
+    }
+  }
+ digitalWrite(pin_1 , HIGH);
+  // เริ่มเชื่อมต่อ Wi-Fi (หรือเปิดโหมดตั้งค่าอัตโนมัติ)
+  bool res = wm.autoConnect("ESP32-SetupAP", "12345678"); // ชื่อ AP และรหัส
+
+  if (!res) {
+    Serial.println("Failed to connect. Restarting...");
+    ESP.restart();
+  } else {
+    Serial.println("WiFi Connected!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  }
+}
+
+void loop() {
+  // โปรแกรมหลักของคุณจะอยู่ในนี้
+}
+
+
+
