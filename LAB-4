@@ -1,0 +1,41 @@
+#define BLYNK_TEMPLATE_ID "TMPL6ITIY2SqJ" 
+#define BLYNK_TEMPLATE_NAME "Quickstart Template" 
+#define BLYNK_AUTH_TOKEN "Xz9kfAcXMaLRE6KSJ0AdzCGjryUc7mo4"
+
+#define BLYNK_PRINT Serial
+
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+
+char ssid[] = "jackyplace-ap2-1"; // WiFi Name ID
+char pass[] = "22220890"; // WiFi Password
+
+int pin_1 = 16; // OUTPUT TO LED
+BlynkTimer timer;
+
+void setup()
+{
+  Serial.begin(115200);
+  pinMode(pin_1, OUTPUT);
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass); // Connect To Blynk
+}
+
+BLYNK_WRITE(V0) // Output when use button V0
+{
+  int value = param.asInt();
+  Serial.print("V0 = ");
+  Serial.println(value);
+
+  if (value == 1) {
+    digitalWrite(pin_1, HIGH);
+  } else {
+    digitalWrite(pin_1, LOW);
+  }
+}
+
+void loop()
+{
+  Blynk.run();
+  timer.run();
+}
