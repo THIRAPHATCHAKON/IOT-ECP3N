@@ -1,0 +1,139 @@
+#include <WiFi.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <HTTPClient.h>
+
+#define LED1 18
+#define LED2 19
+#define POT_PIN 33
+#define P1T_PIN 32
+
+const char* ssid = "Thiraphatchakon";
+const char* password = "123456789";
+// URL เดิมของคุณ
+const char* serverName = "https://roblox-api.sukpat.dev/api/collections/esp32_control/records/led2";
+
+// ตัวแปรเก็บสถานะ (เปลี่ยนชื่อให้สอดคล้องกับ JSON ใหม่)
+bool led1_web_status = false;
+bool led2_web_status = false;
+
+void taskWebControl(void *pvParam) {
+  while(1) {
+    if (WiFi.status() == WL_CONNECTED) {
+      HTTPClient http;
+      http.begin(serverName);
+      
+      int httpResponseCode = http.GET();
+      Serial.println(httpResponseCode);
+      if (httpResponseCode > 0) {
+        String payload = http.getString(); // ได้ข้อความ JSON ยาวๆ มา
+        
+        // --- วิธีแกะข้อมูลแบบไม่ง้อ Library ---
+        // ค้นหาตำแหน่งของคำว่า "led1_status":
+        int index = payload.indexOf("\"led1_status\":"); 
+        if (index != -1) {
+          // เลื่อนตำแหน่งไปหลังเครื่องหมาย : เพื่อดูว่าเป็น true หรือ false
+          String sub = payload.substring(index + 14, index + 19); 
+          
+          if (sub.indexOf("true") != -1) {
+            led1_web_status = true;
+          } else {
+            led1_web_status = false;
+          }
+        }
+        Serial.printf("Status -> LED1: %d\n",led1_web_status);
+      }
+      http.end();
+    }
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+  }
+}
+
+void taskLED(void *pvParam) {
+  pinMode(LED1, OUTPUT);
+  while(1) {
+    if (led1_web_status == true) {
+      // ถ้าสถานะเป็น true ให้กระพริบ
+      int sensorValue = analogRead(POT_PIN);
+      int delayTime = map(sensorValue, 0, 4095, 100, 1000);
+      
+      digitalWrite(LED1, HIGH);
+      vTaskDelay(delayTime / portTICK_PERIOD_MS);
+      digitalWrite(LED1, LOW);
+      vTaskDelay(delayTime / portTICK_PERIOD_MS);
+    } else {
+      // ถ้าสถานะเป็น false ให้ดับไฟ
+      digitalWrite(LED1, LOW);
+      vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+  }
+}
+
+void taskWebControl2(void *pvParam) {
+  while(1) {
+    if (WiFi.status() == WL_CONNECTED) {
+      HTTPClient http;
+      http.begin(serverName);
+      
+      int httpResponseCode = http.GET();
+      Serial.println(httpResponseCode);
+      if (httpResponseCode > 0) {
+        String payload = http.getString(); // ได้ข้อความ JSON ยาวๆ มา
+        
+        // --- วิธีแกะข้อมูลแบบไม่ง้อ Library ---
+        // ค้นหาตำแหน่งของคำว่า "led1_status":
+        int index = payload.indexOf("\"led2_status\":"); 
+        if (index != -1) {
+          // เลื่อนตำแหน่งไปหลังเครื่องหมาย : เพื่อดูว่าเป็น true หรือ false
+          String sub = payload.substring(index + 14, index + 19); 
+          
+          if (sub.indexOf("true") != -1) {
+            led2_web_status = true;
+          } else {
+            led2_web_status = false;
+          }
+        }
+        Serial.printf("Status -> LED2: %d\n",led2_web_status);
+      }
+      http.end();
+    }
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+  }
+}
+
+void taskLED2(void *pvParam) {
+  pinMode(LED2, OUTPUT);
+  while(1) {
+    if (led2_web_status == true) {
+      // ถ้าสถานะเป็น true ให้กระพริบ
+      int sensorValue = analogRead(P1T_PIN);
+      int delayTime = map(sensorValue, 0, 4095, 100, 1000);
+      
+      digitalWrite(LED2, HIGH);
+      vTaskDelay(delayTime / portTICK_PERIOD_MS);
+      digitalWrite(LED2, LOW);
+      vTaskDelay(delayTime / portTICK_PERIOD_MS);
+    } else {
+      // ถ้าสถานะเป็น false ให้ดับไฟ
+      digitalWrite(LED2, LOW);
+      vTaskDelay(500 / portTICK_PERIOD_MS);
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi Connected!");
+
+  xTaskCreatePinnedToCore(taskWebControl, "WebTask", 8192, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(taskLED, "LEDTask", 2048, NULL, 1, NULL, 1);
+  xTaskCreatePinnedToCore(taskWebControl2, "WebTask2", 8192, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(taskLED2, "LEDTask2", 2048, NULL, 1, NULL, 1);
+}
+
+void loop() {}
